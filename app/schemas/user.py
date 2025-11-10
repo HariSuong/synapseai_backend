@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr
 from typing import List
 
 class UserBase(BaseModel):
-  emai: EmailStr
+  email: EmailStr
   is_active: bool = True
   # Giả sử sau này có thêm:
   # full_name: Optional[str] = None

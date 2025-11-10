@@ -9,4 +9,4 @@ api_route = APIRouter()
 
 api_route.include_router(hello.router, prefix = '/hello', tags=["Hello"])
 api_route.include_router(items.router, prefix= '/items', tags=['Item'])
-api_route.include_router(items.router, prefix= '/users', tags=['User'])
+api_route.include_router(users.router, prefix= '/users', tags=['User'])
