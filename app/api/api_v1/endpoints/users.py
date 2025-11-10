@@ -5,16 +5,9 @@ from typing import Optional
 
 from app.schemas import user as user_schema
 from app.models import user as user_model
-from app.database import SessionLocal
-
+from app.api.deps import get_db
+from app.crud import crud_user
 router = APIRouter()
-
-def get_db():
-   db = SessionLocal()
-   try:
-      yield db
-   finally:
-      db.close()   
 
 
 
@@ -23,23 +16,21 @@ def create_user(
   user_in: user_schema.UserCreate,
   db:Session = Depends(get_db)
 ):
-  """
-  Tạo user mới 
-  """
-  fake_hashed_password = user_in.password + "_not_hashed"
-
-  # Tạo 1 đối tượng Model (SQLAlchemy) từ
-  # dữ liệu của Schema (Pydantic)  
-  db_user = user_model.User(
-     email = user_in.email,
-     hashed_password=fake_hashed_password,
-     is_active=user_in.is_active
-  )
-
-  db.add(db_user)
-  db.commit()
-  db.refresh(db_user)
-  return db_user
+   """
+   Tạo user mới.
+   (Đây là tầng API/Endpoint)
+   """
+   # (B) Logic nghiệp vụ của Endpoint
+   #      (Tầng API chịu trách nhiệm check lỗi HTTP)
+   db_user = crud_user.get_user_by_email(db, email=user_in.email)
+   if db_user:
+      raise HTTPException(
+         status_code=400,
+         detail="Email already registered",
+      )
+   
+   # (C) Gọi xuống Tầng Service để tạo
+   return crud_user.create_user(db=db, user_in=user_in)
 
 
 @router.get('/', response_model=list[user_schema.User])
@@ -52,7 +43,7 @@ def get_users(
   Lấy danh sách users (có phân trang)
   """
   
-  users = db.query(user_model.User).offset(skip).limit(limit).all()
+  users = crud_user.get_users(db, skip=skip, limit=limit)
   
   # Trả về list đã lọc (có thể là list rỗng [], chứ không phải None)
   return users
@@ -62,7 +53,7 @@ def get_users(
 def get_user_by_id(user_id : int = Path(..., ge=1), db: Session = Depends(get_db)):
   # Tìm user (chúng ta sẽ làm xịn hơn ở Module 4)
   
-  db_user = db.query(user_model.User).filter(user_model.User.id == user_id).first()
+  db_user = crud_user.get_user_by_id(db, user_id=user_id)
   
   if db_user is None:
      raise HTTPException(status_code=404, detail="User not found")
@@ -76,7 +67,7 @@ def edit_user_by_id(
    db: Session = Depends(get_db)
 ):
   # Tìm user (chúng ta sẽ làm xịn hơn ở Module 4)
-  db_user = db.query(user_model.User).filter(user_model.User.id == user_id).first()
+  db_user = crud_user.get_user_by_id(db, user_id=user_id)
   if db_user is None:
      raise HTTPException(status_code=404, detail="User not found")
   
