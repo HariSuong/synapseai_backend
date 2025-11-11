@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.models import item as item_modal
 from app.schemas import item as item_schema
 from app.api.deps import get_db
+from app.crud import crud_item
 
 
 router = APIRouter()
@@ -20,26 +21,12 @@ def get_items(
     response_model sẽ tự động convert list[dict] này
     thành list[Item] và lọc theo schema 'Item'.
   """
-  return db.query(item_modal.Item).offset(skip).limit(limit).all()
-
+  return crud_item.get_items(db, skip=skip, limit=limit)
+ 
 @router.post('/', response_model=item_schema.Item, status_code=201)
 def create_item(item_in: item_schema.ItemCreate, db:Session = Depends(get_db)):
-  """
-  Tạo một item mới.
-  - item_in: Dữ liệu nhận vào (Request Body), được
-              validate (xác thực) bằng schema 'ItemCreate'.
-  """
   
-  db_item = item_modal.Item(
-    description=item_in.description,
-    name= item_in.name,
-    price=item_in.price 
-  )
-  
-  db.add(db_item)
-  db.commit()
-  db.refresh(db_item)
-  return db_item
+  return crud_item.create_item(db=db, item_in=item_in)
 
 @router.get("/{item_id}", response_model=item_schema.Item)
 def get_item_by_id(
@@ -51,7 +38,7 @@ def get_item_by_id(
   db:Session = Depends(get_db)
 ):
   # Tên 'item_id' phải khớp với '{item_id}' trên path
-  item_db =  db.query(item_modal.Item).filter(item_modal.Item.id == item_id).first()
-  if item_db is None:
+  db_item = crud_item.get_item_by_id(db, item_id=item_id)
+  if db_item is None:
     raise HTTPException(status_code=404, detail="Item not found!")
-  return item_db
+  return db_item

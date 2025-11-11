@@ -62,43 +62,34 @@ def get_user_by_id(user_id : int = Path(..., ge=1), db: Session = Depends(get_db
 
 @router.put('/{user_id}', response_model=user_schema.User)
 def edit_user_by_id(
-   user_id : int,
-   user_in: user_schema.UserUpdate,
+   user_id: int,
+   user_in: user_schema.UserUpdate, # (A) Dùng UserUpdate
    db: Session = Depends(get_db)
 ):
-  # Tìm user (chúng ta sẽ làm xịn hơn ở Module 4)
-  db_user = crud_user.get_user_by_id(db, user_id=user_id)
-  if db_user is None:
-     raise HTTPException(status_code=404, detail="User not found")
-  
-  # (C) Lấy dữ liệu từ Pydantic
-  # exclude_unset=True: Chỉ lấy các trường mà client
-  # *thực sự* gửi lên (bỏ qua các trường None/default)
-  update_data = user_in.model_dump(exclude_unset=True)
-
-  if "password" in update_data:
-      fake_hashed_password = update_data['password'] + "_not_hashed"
-      db_user.hashed_password = fake_hashed_password
-
-  if "email" in update_data:
-      db_user.email = update_data["email"]
-      
-  if "is_active" in update_data:
-      db_user.is_active = update_data["is_active"]
-  
-
-  db.add(db_user)
-  db.commit()
-  db.refresh(db_user)
+   """
+   Cập nhật user.
+   (Tầng API chỉ lo check 404)
+   """
+   # (B) Tầng API gọi CRUD để lấy user
+   db_user = crud_user.get_user_by_id(db, user_id=user_id)
+   if db_user is None:
+      raise HTTPException(status_code=404, detail="User not found")
+   
+   # (C) Tầng API gọi CRUD để cập nhật
+   # Giao hết logic update (set attr, commit) cho CRUD
+   updated_user = crud_user.update_user(db=db, db_user=db_user, user_in=user_in)
+   
+   return updated_user
 
      
 
 
 @router.delete("/{user_id}", status_code=204)
 def delete_user_by_id(user_id : int = Path(..., ge=1), db: Session = Depends(get_db)):
-  db_user = db.query(user_model.User).filter(user_model.User.id == user_id).first()
+  # Tìm user 
+  db_user = crud_user.get_user_by_id(db, user_id=user_id)
   if db_user is None:
      raise HTTPException(status_code=404, detail="User not found")
-  db.delete(db_user)
-  db.commit()
+  
+  crud_user.delete_user(db, db_user)
   return None

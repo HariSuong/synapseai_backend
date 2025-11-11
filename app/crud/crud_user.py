@@ -40,5 +40,33 @@ def create_user(db: Session, user_in: user_schema.UserCreate):
     return db_user
 
 # Em có thể tự viết:
-# def update_user(...): ...
-# def delete_user(...): ...
+def update_user(db: Session, db_user: user_model.User, user_in: user_schema.UserUpdate ): 
+    """
+    Service (CRUD) để cập nhật user.
+    Đây là logic DB thuần túy.
+    """
+    # (A) Lấy dict chỉ chứa các trường được gửi lên
+    update_data = user_in.model_dump(exclude_unset=True)
+
+    # (B) Logic hash pass (nếu có)
+    if "password" in update_data:
+        fake_hashed_password = update_data["password"] + "_not_hashed"
+        # Ghi đè (overwrite) plain-text pass bằng pass đã hash
+        update_data["hashed_password"] = fake_hashed_password
+        # Xóa plain-text pass đi
+        del update_data["password"]
+    
+    # (C) Cập nhật các thuộc tính của object Model
+    # db_user là object SQLAlchemy, ta có thể set attr cho nó
+    for field in update_data:
+        setattr(db_user, field, update_data[field])
+    
+    # (D) Commit thay đổi
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+def delete_user(db: Session, db_user: user_schema.User):
+    db.delete(db_user)
+    db.commit()
