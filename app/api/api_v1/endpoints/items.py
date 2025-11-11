@@ -4,16 +4,16 @@ from sqlalchemy.orm import Session
 
 from app.models import item as item_modal
 from app.schemas import item as item_schema
-from app.api.deps import get_db
 from app.crud import crud_item
+from app.api.deps import get_db, common_pagination_params
+
 
 
 router = APIRouter()
 
 @router.get('/', response_model= list[item_schema.Item])
 def get_items(
-  skip: int = Query(0 , ge=0), # ge=0 (lớn hơn hoặc bằng 0)
-  limit: int = Query(10, ge=1, le=50), # ge=1 (>=1), le=50 (<=50)
+  pagination: dict = Depends(common_pagination_params),
   db:Session = Depends(get_db)
 ):
   """
@@ -21,7 +21,7 @@ def get_items(
     response_model sẽ tự động convert list[dict] này
     thành list[Item] và lọc theo schema 'Item'.
   """
-  return crud_item.get_items(db, skip=skip, limit=limit)
+  return crud_item.get_items(db, skip=pagination["skip"], limit=pagination["limit"])
  
 @router.post('/', response_model=item_schema.Item, status_code=201)
 def create_item(item_in: item_schema.ItemCreate, db:Session = Depends(get_db)):

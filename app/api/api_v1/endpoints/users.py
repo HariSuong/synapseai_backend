@@ -5,7 +5,7 @@ from typing import Optional
 
 from app.schemas import user as user_schema
 from app.models import user as user_model
-from app.api.deps import get_db
+from app.api.deps import get_db, common_pagination_params
 from app.crud import crud_user
 router = APIRouter()
 
@@ -35,15 +35,14 @@ def create_user(
 
 @router.get('/', response_model=list[user_schema.User])
 def get_users(
-  skip: int = 0, 
-  limit: int = 100, 
-  db: Session = Depends(get_db)
+   pagination: dict = Depends(common_pagination_params),
+   db: Session = Depends(get_db)
 ):
   """
   Lấy danh sách users (có phân trang)
   """
   
-  users = crud_user.get_users(db, skip=skip, limit=limit)
+  users = crud_user.get_users(db, skip=pagination["skip"], limit=pagination["limit"])
   
   # Trả về list đã lọc (có thể là list rỗng [], chứ không phải None)
   return users
