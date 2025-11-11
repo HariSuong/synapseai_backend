@@ -5,7 +5,7 @@ from typing import Optional
 
 from app.schemas import user as user_schema
 from app.models import user as user_model
-from app.api.deps import get_db, common_pagination_params
+from app.api.deps import get_db, common_pagination_params, get_current_user
 from app.crud import crud_user
 router = APIRouter()
 
@@ -36,12 +36,13 @@ def create_user(
 @router.get('/', response_model=list[user_schema.User])
 def get_users(
    pagination: dict = Depends(common_pagination_params),
-   db: Session = Depends(get_db)
+   db: Session = Depends(get_db),
+   current_user: user_model.User = Depends(get_current_user)
 ):
   """
-  Lấy danh sách users (có phân trang)
+  Lấy danh sách users (có phân trang) (YÊU CẦU ĐĂNG NHẬP)
   """
-  
+  print(f"User {current_user.email} đang gọi API này.")
   users = crud_user.get_users(db, skip=pagination["skip"], limit=pagination["limit"])
   
   # Trả về list đã lọc (có thể là list rỗng [], chứ không phải None)
@@ -92,3 +93,14 @@ def delete_user_by_id(user_id : int = Path(..., ge=1), db: Session = Depends(get
   
   crud_user.delete_user(db, db_user)
   return None
+
+@router.get("/me", response_model=user_schema.User)
+def read_users_me(
+   current_user: user_model.User = Depends(get_current_user)
+):
+   """
+   Lấy thông tin của user đang đăng nhập (từ token).
+   """
+   # Không cần query DB nữa, dependency đã làm rồi
+   return current_user
+

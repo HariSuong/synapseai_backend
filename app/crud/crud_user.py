@@ -2,6 +2,9 @@
 from sqlalchemy.orm import Session
 from app.models import user as user_model
 from app.schemas import user as user_schema
+from typing import Optional
+
+from app.core.security import get_password_hash, verify_password
 
 def get_user_by_id(db: Session, user_id: int):
     """
@@ -27,11 +30,11 @@ def create_user(db: Session, user_in: user_schema.UserCreate):
     Service (CRUD) để tạo user mới.
     """
     # (Chúng ta sẽ hash pass thật ở Module 7)
-    fake_hashed_password = user_in.password + "_not_hashed"
+    hashed_password = get_password_hash(user_in.password) 
     
     db_user = user_model.User(
         email=user_in.email,
-        hashed_password=fake_hashed_password,
+        hashed_password=hashed_password,
         is_active=user_in.is_active
     )
     db.add(db_user)
@@ -50,9 +53,9 @@ def update_user(db: Session, db_user: user_model.User, user_in: user_schema.User
 
     # (B) Logic hash pass (nếu có)
     if "password" in update_data:
-        fake_hashed_password = update_data["password"] + "_not_hashed"
+        hashed_password = get_password_hash(update_data["password"])
         # Ghi đè (overwrite) plain-text pass bằng pass đã hash
-        update_data["hashed_password"] = fake_hashed_password
+        update_data["hashed_password"] = hashed_password
         # Xóa plain-text pass đi
         del update_data["password"]
     
@@ -70,3 +73,25 @@ def update_user(db: Session, db_user: user_model.User, user_in: user_schema.User
 def delete_user(db: Session, db_user: user_schema.User):
     db.delete(db_user)
     db.commit()
+
+
+# (D) HÀM MỚI: Dùng để xác thực
+def authenticate_user(db: Session, email: str, password: str) -> Optional[user_model.User]:
+    """
+    Kiểm tra email và mật khẩu (dùng cho /login).
+    """
+    # 1. Lấy user bằng email
+    user = get_user_by_email(db, email=email)
+    if not user:
+        return None # User không tồn tại    
+    
+    # 2. Kiểm tra mật khẩu
+    if not verify_password(password, user.hashed_password):
+        return None # Sai mật khẩu
+    
+    # 3. Thành công
+    return user
+
+
+
+

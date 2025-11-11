@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.api_v1.api import api_route
+from app.api.api_v1.api import api_router
 from app.database import engine
 from app import models
 
@@ -21,4 +21,4 @@ app = FastAPI(
 def read_root():
   return {"message": "Welcome to SynapseAI API v1"}
 
-app.include_router(api_route, prefix="/api/v1")
+app.include_router(api_router, prefix="/api/v1")
