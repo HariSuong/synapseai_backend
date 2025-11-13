@@ -1,5 +1,5 @@
 # app/api/api_v1/endpoints/users.py
-from fastapi import APIRouter, Path, Depends, HTTPException
+from fastapi import APIRouter, Path, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -7,6 +7,8 @@ from app.schemas import user as user_schema
 from app.models import user as user_model
 from app.api.deps import get_db, common_pagination_params, get_current_user
 from app.crud import crud_user
+from app.core.email import send_welcome_email
+
 router = APIRouter()
 
 
@@ -14,11 +16,11 @@ router = APIRouter()
 @router.post('/', response_model=user_schema.User, status_code=201)
 def create_user(
   user_in: user_schema.UserCreate,
+  tasks: BackgroundTasks,
   db:Session = Depends(get_db)
 ):
    """
-   Tạo user mới.
-   (Đây là tầng API/Endpoint)
+   Tạo user mới VÀ gửi mail chào mừng (trong nền)
    """
    # (B) Logic nghiệp vụ của Endpoint
    #      (Tầng API chịu trách nhiệm check lỗi HTTP)
@@ -29,8 +31,18 @@ def create_user(
          detail="Email already registered",
       )
    
-   # (C) Gọi xuống Tầng Service để tạo
-   return crud_user.create_user(db=db, user_in=user_in)
+   # (C) Tạo user trong DB (việc nhanh)
+   new_user = crud_user.create_user(db=db, user_in=user_in)
+
+   # (D) Thêm tác vụ gửi mail vào HÀNG ĐỢI
+   # Hàm này CHƯA chạy. Nó chỉ chạy SAU KHI "return new_user"
+   tasks.add_task(
+      send_welcome_email,
+      email_to = user_in.email,
+      username = user_in.email
+   )
+
+   return new_user
 
 
 @router.get('/', response_model=list[user_schema.User])
