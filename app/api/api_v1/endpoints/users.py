@@ -22,15 +22,6 @@ def create_user(
    """
    Tạo user mới VÀ gửi mail chào mừng (trong nền)
    """
-   # (B) Logic nghiệp vụ của Endpoint
-   #      (Tầng API chịu trách nhiệm check lỗi HTTP)
-   db_user = crud_user.get_user_by_email(db, email=user_in.email)
-   if db_user:
-      raise HTTPException(
-         status_code=400,
-         detail="Email already registered",
-      )
-   
    # (C) Tạo user trong DB (việc nhanh)
    new_user = crud_user.create_user(db=db, user_in=user_in)
 
@@ -77,11 +68,7 @@ def read_users_me(
 def get_user_by_id(user_id : int = Path(..., ge=1), db: Session = Depends(get_db)):
   # Tìm user (chúng ta sẽ làm xịn hơn ở Module 4)
   
-  db_user = crud_user.get_user_by_id(db, user_id=user_id)
-  
-  if db_user is None:
-     raise HTTPException(status_code=404, detail="User not found")
-  return db_user
+  return crud_user.get_user_by_id(db, user_id=user_id)
 
 
 @router.put('/{user_id}', response_model=user_schema.User)

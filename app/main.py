@@ -7,6 +7,8 @@ import logging
 import time
 from app.core.config import settings
 
+from fastapi.responses import JSONResponse
+from app.core.exceptions import EmailAlreadyExistsError, SynapseAIException,UserNotFoundError
 # (1) Import cả engine VÀ Base từ app.database
 from app.database import engine, Base 
 from app import models # (2) Vẫn import models (để đăng ký)
@@ -71,8 +73,30 @@ async def add_process_time_header_and_log(request: Request, call_next):
     
     return response
 
+
 @app.get('/', tags = ["Root"])
 def read_root():
   return {"message": "Welcome to SynapseAI API v1"}
+
+@app.exception_handler(UserNotFoundError)
+async def user_not_found_handler(request: Request, exc: UserNotFoundError):
+    """
+    "Bắt" lỗi UserNotFoundError và trả về 404.
+    """
+    return JSONResponse(
+        status_code=404,
+        content={"detail": exc.detail} # Lấy message từ exception
+    )
+
+@app.exception_handler(EmailAlreadyExistsError)
+async def email_exists_handler(request: Request, exc: EmailAlreadyExistsError):
+    """
+    "Bắt" lỗi EmailAlreadyExistsError và trả về 400.
+    """
+    return JSONResponse(
+        status_code=400,
+        content={"detail": exc.detail}
+    )
+
 
 app.include_router(api_router, prefix="/api/v1")

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.models import user as user_model
 from app.schemas import user as user_schema
 from typing import Optional
-
+from app.core.exceptions import EmailAlreadyExistsError, UserNotFoundError, SynapseAIException
 from app.core.security import get_password_hash, verify_password
 
 def get_user_by_id(db: Session, user_id: int):
@@ -11,7 +11,12 @@ def get_user_by_id(db: Session, user_id: int):
     Service (CRUD) để lấy user bằng ID.
     Đây là logic DB thuần túy.
     """
-    return db.query(user_model.User).filter(user_model.User.id == user_id).first()
+    db_user = db.query(user_model.User).filter(user_model.User.id == user_id).first()
+    
+    if db_user is None:
+        raise UserNotFoundError()
+    
+    return db_user
 
 def get_user_by_email(db: Session, email: str):
     """
@@ -29,6 +34,10 @@ def create_user(db: Session, user_in: user_schema.UserCreate):
     """
     Service (CRUD) để tạo user mới.
     """
+    db_user_by_email = get_user_by_email(db, email=user_in.email)
+    if db_user_by_email:
+        raise EmailAlreadyExistsError()
+
     # (Chúng ta sẽ hash pass thật ở Module 7)
     hashed_password = get_password_hash(user_in.password) 
     
