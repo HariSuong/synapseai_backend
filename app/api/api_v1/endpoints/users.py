@@ -61,6 +61,18 @@ def get_users(
   return users
 
 
+@router.get("/me", response_model=user_schema.User)
+def read_users_me(
+   current_user: user_model.User = Depends(get_current_user)
+):
+   """
+   Lấy thông tin của user đang đăng nhập (từ token).
+   """
+   # Không cần query DB nữa, dependency đã làm rồi
+   return current_user
+
+
+
 @router.get('/{user_id}', response_model=user_schema.User)
 def get_user_by_id(user_id : int = Path(..., ge=1), db: Session = Depends(get_db)):
   # Tìm user (chúng ta sẽ làm xịn hơn ở Module 4)
@@ -105,14 +117,4 @@ def delete_user_by_id(user_id : int = Path(..., ge=1), db: Session = Depends(get
   
   crud_user.delete_user(db, db_user)
   return None
-
-@router.get("/me", response_model=user_schema.User)
-def read_users_me(
-   current_user: user_model.User = Depends(get_current_user)
-):
-   """
-   Lấy thông tin của user đang đăng nhập (từ token).
-   """
-   # Không cần query DB nữa, dependency đã làm rồi
-   return current_user
 
