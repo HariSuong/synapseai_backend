@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     MAIL_SERVER: str
     MAIL_FROM_NAME: str
 
+    CLIENT_ORIGIN_DEV: str
+    CLIENT_ORIGIN_PROD: str
+
 # (A) Khởi tạo 1 thể hiện (instance) duy nhất của Settings
 # Mọi file khác trong dự án sẽ import `settings` từ file này
 settings = Settings()
